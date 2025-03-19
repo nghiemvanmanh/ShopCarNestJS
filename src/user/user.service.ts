@@ -37,4 +37,13 @@ export class UserService {
     await this.userRepository.update(id, updateUser);
     return this.userRepository.findOne({ where: { id: id } });
   }
+
+  async delete(id: number) {
+    const user = await this.userRepository.findOne({ where: { id: id } });
+    if (!user) {
+      throw new UnauthorizedException(`User ${id} not found`);
+    }
+    await this.userRepository.delete(id);
+    return `User ${id} deleted successfully`;
+  }
 }
