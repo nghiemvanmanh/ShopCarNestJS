@@ -63,9 +63,6 @@ export class UserController {
     @Request() req,
   ) {
     const user = req.user;
-    console.log(req.user);
-    console.log(user.role);
-    console.log(user.id);
     if (user.role !== 'ADMIN' && user.id !== id) {
       throw new UnauthorizedException(
         'You do not have permission to update this user',
