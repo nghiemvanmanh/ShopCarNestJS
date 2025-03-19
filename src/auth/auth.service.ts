@@ -2,7 +2,7 @@ import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { InjectRepository } from '@nestjs/typeorm';
 import { compareSync } from 'bcrypt';
-import { RefreshToken } from 'database/entities/refresh-token';
+import { RefreshToken } from 'database/entities/refresh-token.entity';
 import { User } from 'database/entities/user.entity';
 import { Repository } from 'typeorm';
 
@@ -21,7 +21,11 @@ export class AuthService {
     });
     if (user) {
       if (compareSync(password, user.password)) {
-        const payload = { sub: username, email: user.email, role: user.role };
+        const payload = {
+          id: user.id,
+          username: username,
+          role: user.role,
+        };
         const [accessToken, refreshToken] = await Promise.all([
           this.jwtService.sign(payload),
           this.jwtService.sign(payload, {
@@ -48,8 +52,8 @@ export class AuthService {
       throw new UnauthorizedException();
     }
     const payload = {
-      sub: refreshToken.user.username,
-      email: refreshToken.user.email,
+      id: refreshToken.user.id,
+      username: refreshToken.user.username,
       role: refreshToken.user.role,
     };
     //tra ve ma accestoken new
