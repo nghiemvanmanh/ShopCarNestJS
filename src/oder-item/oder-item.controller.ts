@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Request,
 } from '@nestjs/common';
 import { OderItemService } from './oder-item.service';
 import { CreateOderItemDto } from './dto/create-oder-item.dto';
@@ -21,11 +22,15 @@ export class OderItemController {
   @Public()
   @Post('create')
   create(
-    @Param('orderId') orderId: number,
+    @Request() req,
     @Param('productId') productId: number,
     @Body() createOderItemDto: CreateOderItemDto,
   ) {
-    return this.oderItemService.create(orderId, productId, createOderItemDto);
+    return this.oderItemService.create(
+      req.user.id,
+      productId,
+      createOderItemDto,
+    );
   }
 
   @Patch(':id')

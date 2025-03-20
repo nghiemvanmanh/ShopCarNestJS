@@ -21,7 +21,7 @@ export class Order {
   @Column('decimal')
   total_amount: number;
 
-  @Column()
+  @Column({ default: 'PENDING' })
   status: string;
 
   @CreateDateColumn({ type: 'timestamp' })

@@ -6,6 +6,8 @@ import { OrderItem } from 'database/entities/order-item.entity';
 import { Repository } from 'typeorm';
 import { Order } from 'database/entities/order.entity';
 import { Product } from 'database/entities/product.entity';
+import { OderService } from 'src/oder/oder.service';
+import { User } from 'database/entities/user.entity';
 
 @Injectable()
 export class OderItemService {
@@ -14,42 +16,60 @@ export class OderItemService {
     private orderItemRepository: Repository<OrderItem>,
     @InjectRepository(Order) private orderRepository: Repository<Order>,
     @InjectRepository(Product) private productRepository: Repository<Product>,
+    @InjectRepository(User) private userRepository: Repository<User>,
   ) {}
   async create(
-    orderId: number,
+    userId: number,
     productId: number,
-    createOderItemDto: CreateOderItemDto,
+    createOrderItemDto: CreateOderItemDto,
   ) {
-    const [order, product] = await Promise.all([
-      this.orderRepository.findOne({ where: { id: orderId } }),
-      this.productRepository.findOne({ where: { id: productId } }),
-    ]);
-
-    if (!order) {
-      throw new UnauthorizedException('Order not found');
+    // check User login
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) {
+      throw new UnauthorizedException(`User ${userId} not found`);
     }
 
+    // eslint-disable-next-line prefer-const
+    let [product, order] = await Promise.all([
+      this.productRepository.findOne({ where: { id: productId } }),
+      this.orderRepository.findOne({ where: { user: { id: userId } } }),
+    ]);
+    // Tìm Product
     if (!product) {
       throw new UnauthorizedException('Product not found');
     }
-    if (product.stock < createOderItemDto.quantity) {
+
+    // Kiểm tra stock
+    if (product.stock < createOrderItemDto.quantity) {
       throw new UnauthorizedException(
         `Not enough stock for product ID ${productId}`,
       );
     }
+    if (!order) {
+      // Tự động tạo Order mới và lấy order_id từ kết quả trả về
+      order = await this.orderRepository.create({
+        user: user,
+        total_amount: 0,
+        status: 'PENDING',
+      });
+    }
 
-    //Giảm số lượng trong Product
-    product.stock -= createOderItemDto.quantity;
+    // Giảm stock và tạo OrderItem
+    product.stock -= createOrderItemDto.quantity;
+
     const [_, orderItem] = await Promise.all([
       this.productRepository.save(product),
-      this.orderItemRepository.create({
-        ...createOderItemDto,
-        order: order,
-        product: product,
-        price: product.price,
-      }),
+      this.orderItemRepository.save(
+        this.orderItemRepository.create({
+          ...createOrderItemDto,
+          order: order,
+          product: product,
+          price: product.price,
+        }),
+      ),
     ]);
 
+    // Tính lại total_amount cho Order mới save Order sau
     const orderItems = await this.orderItemRepository.find({
       where: { order: { id: order.id } },
       relations: ['product'],
@@ -60,11 +80,9 @@ export class OderItemService {
       0,
     );
     order.total_amount = totalAmount;
+    await this.orderRepository.save(order);
 
-    await Promise.all([
-      this.orderRepository.save(order),
-      this.orderItemRepository.save(orderItem),
-    ]);
+    // 7. Trả về OrderItem vừa thêm (có order_id mới)
     return orderItem;
   }
 
