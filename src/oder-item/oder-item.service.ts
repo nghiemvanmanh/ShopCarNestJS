@@ -60,8 +60,12 @@ export class OderItemService {
       0,
     );
     order.total_amount = totalAmount;
-    await this.orderRepository.save(order);
-    return await this.orderItemRepository.save(orderItem);
+
+    await Promise.all([
+      this.orderRepository.save(order),
+      this.orderItemRepository.save(orderItem),
+    ]);
+    return orderItem;
   }
 
   findAll() {
