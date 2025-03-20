@@ -6,14 +6,10 @@ import {
 } from '@nestjs/common';
 
 @Injectable()
-export class ProductGuard implements CanActivate {
+export class AdminGuard implements CanActivate {
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest();
     const user = request.user;
-
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
 
     // Admin được phép mọi hành động
     if (user.role === 'ADMIN') {
