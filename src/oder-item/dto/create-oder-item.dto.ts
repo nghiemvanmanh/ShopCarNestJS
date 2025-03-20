@@ -1,1 +1,5 @@
-export class CreateOderItemDto {}
+export class CreateOderItemDto {
+  quantity: number;
+
+  price: number;
+}
