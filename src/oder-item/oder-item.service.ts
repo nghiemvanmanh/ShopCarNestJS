@@ -22,18 +22,18 @@ export class OderItemService {
     userId: number,
     productId: number,
     createOrderItemDto: CreateOderItemDto,
+    orderId?: number,
   ) {
-    // check User login
     const user = await this.userRepository.findOne({ where: { id: userId } });
+    // check User login
     if (!user) {
       throw new UnauthorizedException(`User ${userId} not found`);
     }
 
-    // eslint-disable-next-line prefer-const
-    let [product, order] = await Promise.all([
-      this.productRepository.findOne({ where: { id: productId } }),
-      this.orderRepository.findOne({ where: { user: { id: userId } } }),
-    ]);
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+    });
+
     // Tìm Product
     if (!product) {
       throw new UnauthorizedException('Product not found');
@@ -45,15 +45,31 @@ export class OderItemService {
         `Not enough stock for product ID ${productId}`,
       );
     }
-    if (!order) {
-      // Tự động tạo Order mới và lấy order_id từ kết quả trả về
-      order = await this.orderRepository.create({
-        user: user,
-        total_amount: 0,
-        status: 'PENDING',
+    let order: Order;
+    if (orderId) {
+      // Nếu có orderId thì tìm order đó
+      order = await this.orderRepository.findOne({
+        where: { id: orderId, user: { id: userId } },
       });
+      if (!order) {
+        throw new UnauthorizedException(`Order ${orderId} not found`);
+      }
+    } else {
+      // Nếu không truyền orderId, tìm order PENDING của user
+      order = await this.orderRepository.findOne({
+        where: { user: { id: userId }, status: 'PENDING' },
+        order: { created_at: 'DESC' }, // Lấy order mới nhất
+      });
+      // Nếu không có order nào, tạo mới
+      if (!order) {
+        order = this.orderRepository.create({
+          user: user,
+          total_amount: 0,
+          status: 'PENDING',
+        });
+        await this.orderRepository.save(order);
+      }
     }
-
     // Giảm stock và tạo OrderItem
     product.stock -= createOrderItemDto.quantity;
 

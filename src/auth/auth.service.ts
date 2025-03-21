@@ -21,7 +21,7 @@ export class AuthService {
     });
     if (user) {
       if (compareSync(password, user.password)) {
-        const payload = { sub: username, email: user.email, role: user.role };
+        const payload = { id: user.id, email: user.email, role: user.role };
         const [accessToken, refreshToken] = await Promise.all([
           this.jwtService.sign(payload),
           this.jwtService.sign(payload, {
@@ -48,7 +48,7 @@ export class AuthService {
       throw new UnauthorizedException();
     }
     const payload = {
-      sub: refreshToken.user.username,
+      id: refreshToken.user.id,
       email: refreshToken.user.email,
       role: refreshToken.user.role,
     };
