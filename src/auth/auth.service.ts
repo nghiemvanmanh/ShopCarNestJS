@@ -20,7 +20,8 @@ export class AuthService {
       where: { username: username },
     });
     if (user) {
-      if (compareSync(password, user.password)) {
+      const isMatched = compareSync(password, user.password);
+      if (isMatched) {
         const payload = { id: user.id, email: user.email, role: user.role };
         const [accessToken, refreshToken] = await Promise.all([
           this.jwtService.sign(payload),

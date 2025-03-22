@@ -1,5 +1,4 @@
 export class CreateOderItemDto {
-  quantity: number;
-
   price: number;
+  quantity: number;
 }

@@ -13,13 +13,14 @@ import { UpdateOderDto } from './dto/update-oder.dto';
 @Controller('oder')
 export class OderController {
   constructor(private readonly oderService: OderService) {}
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOderDto: UpdateOderDto) {
-    return this.oderService.update(+id, updateOderDto);
-  }
 
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.oderService.remove(+id);
+  @Post('create')
+  create(
+    @Request() req,
+    @Param('productId') productId: number,
+    @Param('quantity') quantity: number,
+  ) {
+    const userId = req.user.id;
+    return this.oderService.create(userId, productId, quantity);
   }
 }
