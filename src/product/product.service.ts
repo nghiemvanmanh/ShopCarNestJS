@@ -1,4 +1,9 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -42,5 +47,21 @@ export class ProductService {
       throw new UnauthorizedException('Product not found');
     }
     return this.productRepository.delete(id);
+  }
+
+  async decreaseStock(productId: number, quantity: number): Promise<Product> {
+    const product = await this.productRepository.findOne({
+      where: { id: productId },
+    });
+    if (!product) {
+      throw new NotFoundException(`Product ID ${productId} not found`);
+    }
+    if (product.stock < quantity) {
+      throw new BadRequestException(
+        `Not enough stock for product ID ${productId}`,
+      );
+    }
+    product.stock -= quantity;
+    return await this.productRepository.save(product);
   }
 }
