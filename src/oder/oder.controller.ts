@@ -8,7 +8,6 @@ import {
   Delete,
 } from '@nestjs/common';
 import { OderService } from './oder.service';
-import { UpdateOderDto } from './dto/update-oder.dto';
 
 @Controller('oder')
 export class OderController {
@@ -17,10 +16,9 @@ export class OderController {
   @Post('create')
   create(
     @Request() req,
-    @Param('productId') productId: number,
-    @Param('quantity') quantity: number,
+    @Body() items: { productId: number; quantity: number }[],
   ) {
     const userId = req.user.id;
-    return this.oderService.create(userId, productId, quantity);
+    return this.oderService.create(userId, items);
   }
 }
