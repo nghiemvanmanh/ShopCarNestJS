@@ -53,14 +53,14 @@ export class ProductService {
     const product = await this.productRepository.findOne({
       where: { id: productId },
     });
-    if (!product) {
-      throw new NotFoundException(`Product ID ${productId} not found`);
-    }
-    if (product.stock < quantity) {
-      throw new BadRequestException(
-        `Not enough stock for product ID ${productId}`,
-      );
-    }
+    // if (!product) {
+    //   throw new NotFoundException(`Product ID ${productId} not found`);
+    // }
+    // if (product.stock < quantity) {
+    //   throw new BadRequestException(
+    //     `Not enough stock for product ID ${productId}`,
+    //   );
+    // }
     product.stock -= quantity;
     return await this.productRepository.save(product);
   }
