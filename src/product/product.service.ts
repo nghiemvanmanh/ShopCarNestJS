@@ -8,13 +8,14 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from 'database/entities/product.entity';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
+    private dataSource: DataSource,
   ) {}
 
   async createProduct(addProduct: CreateProductDto): Promise<Product> {
@@ -49,19 +50,29 @@ export class ProductService {
     return this.productRepository.delete(id);
   }
 
-  async decreaseStock(productId: number, quantity: number): Promise<Product> {
-    const product = await this.productRepository.findOne({
-      where: { id: productId },
+  async decreaseStock(items: { productId: number; quantity: number }[]) {
+    return await this.dataSource.transaction(async (manager) => {
+      // lay san pham duoc goi
+      const productIds = items.map((item) => item.productId);
+
+      // Lấy toàn bộ sản phẩm trong DB
+      const products = await manager.findByIds(Product, productIds);
+
+      // So sanh so luong san pham trong DB duoc tim thay qua cac id duoc truyen voi so luong cac san pham duoc truyen
+      if (products.length !== productIds.length)
+        throw new Error('Some products not found');
+
+      // Kiểm tra số lượng từng sản phẩm
+      products.forEach((product) => {
+        const item = items.find((i) => i.productId === product.id);
+        if (product.stock < item.quantity)
+          throw new Error(`Not enough stock for product ID ${product.id}`);
+        product.stock -= item.quantity;
+      });
+
+      // Giảm stock cho tất cả sản phẩm trong 1 lần save
+      await manager.save(products);
+      return products;
     });
-    // if (!product) {
-    //   throw new NotFoundException(`Product ID ${productId} not found`);
-    // }
-    // if (product.stock < quantity) {
-    //   throw new BadRequestException(
-    //     `Not enough stock for product ID ${productId}`,
-    //   );
-    // }
-    product.stock -= quantity;
-    return await this.productRepository.save(product);
   }
 }

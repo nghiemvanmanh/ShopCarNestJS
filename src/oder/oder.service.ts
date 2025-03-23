@@ -12,74 +12,42 @@ export class OderService {
   constructor(
     private productService: ProductService,
     @InjectRepository(OrderItem)
-    private orderItemRepository: Repository<OrderItem>,
     @InjectRepository(Product)
-    private productRepository: Repository<Product>,
     private dataSource: DataSource,
   ) {}
 
-  async create(
+  async createOrderWithItems(
     userId: number,
     items: { productId: number; quantity: number }[],
   ): Promise<Order> {
-    return await this.dataSource.transaction(async (manager) => {
-      // Tạo hoặc lấy order PENDING của user trong transaction
-      let order = await manager.findOne(Order, {
-        where: { user: { id: userId }, status: 'PENDING' },
-        order: { created_at: 'DESC' },
+    return this.dataSource.transaction(async (manager) => {
+      // Giảm stock và lấy thông tin sản phẩm
+      const products = await this.productService.decreaseStock(items);
+
+      // Tính tổng tiền và tạo order items
+      const orderItems = products.map((product) => {
+        const item = items.find((i) => i.productId === product.id);
+        return manager.create(OrderItem, {
+          product,
+          quantity: item.quantity,
+          price: product.price,
+        });
       });
 
-      if (!order) {
-        order = manager.create(Order, {
-          user: { id: userId },
-          total_amount: 0,
-          status: 'PENDING',
-        });
-        await manager.save(order);
-      }
+      const totalAmount = orderItems.reduce(
+        (sum, item) => sum + item.price * item.quantity,
+        0,
+      );
 
-      let totalAmount = order.total_amount;
+      // Tạo order
+      const order = manager.create(Order, {
+        user: { id: userId },
+        total_amount: totalAmount,
+        status: 'PENDING',
+        orderItems, // Gán trực tiếp orderItems vào order nếu có relation cascade
+      });
 
-      // Thêm từng order item (ngoài transaction)
-      for (const { productId, quantity } of items) {
-        try {
-          const product = await this.productRepository.findOne({
-            where: { id: productId },
-          });
-
-          if (!product) {
-            console.warn(`Product with ID ${productId} not found, skipping.`);
-            continue;
-          }
-
-          if (product.stock < quantity) {
-            console.warn(
-              `Not enough stock for product ID ${productId}, skipping.`,
-            );
-            continue;
-          }
-
-          // Tạo order item
-          const orderItem = this.orderItemRepository.create({
-            order: order,
-            product: product,
-            quantity: quantity,
-            price: product.price,
-          });
-          await this.orderItemRepository.save(orderItem);
-
-          // Giảm stock sau khi tạo order-item
-          await this.productService.decreaseStock(productId, quantity);
-
-          // Cập nhật tổng tiền
-          totalAmount += product.price * quantity;
-        } catch (error) {
-          console.error(
-            `Error adding product ID ${productId}: ${error.message}`,
-          );
-        }
-      }
-      order.total_amount = totalAmount;
+      // Lưu order cùng orderItems 1 lần duy nhất
       await manager.save(order);
 
       return order;
