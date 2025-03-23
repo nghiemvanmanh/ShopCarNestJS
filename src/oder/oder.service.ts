@@ -16,7 +16,7 @@ export class OderService {
     private dataSource: DataSource,
   ) {}
 
-  async createOrderWithItems(
+  async create(
     userId: number,
     items: { productId: number; quantity: number }[],
   ): Promise<Order> {
