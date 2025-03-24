@@ -7,6 +7,7 @@ import * as bcrypt from 'bcrypt';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { Review } from 'database/entities/review.entity';
 import { Product } from 'database/entities/product.entity';
+import { OrderItem } from 'database/entities/order-item.entity';
 
 @Injectable()
 export class UserService {
@@ -57,15 +58,22 @@ export class UserService {
     comment: string,
   ): Promise<Review> {
     return this.dataSource.transaction(async (manager) => {
-      const [user, product] = await Promise.all([
-        manager.findOne(User, { where: { id: userId } }),
-        manager.findOne(Product, { where: { id: productId } }),
-      ]);
-      if (!user) throw new Error('User not found');
-      if (!product) throw new Error('Product not found');
+      const hasPurchased = await manager.findOne(OrderItem, {
+        where: {
+          order: { user: { id: userId }, status: 'COMPLETED' },
+          product: { id: productId },
+        },
+        relations: ['order', 'product'],
+      });
+
+      if (!hasPurchased) {
+        throw new Error(
+          'You can only review products you have purchased and completed for',
+        );
+      }
       const review = manager.create(Review, {
-        user,
-        product,
+        user: { id: userId },
+        product: { id: productId },
         rating,
         comment,
       });

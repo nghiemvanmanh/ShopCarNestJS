@@ -58,12 +58,15 @@ export class OderService {
       if (order.status !== 'PENDING') {
         throw new Error('Order cannot be compeleted');
       }
-      return manager.save(Payment, {
+      const payment = await manager.create(Payment, {
         order,
         amount: order.total_amount,
         payment_method: paymentMethod,
         status: 'SUCCESS',
       });
+      order.status = 'COMPLETED';
+      await manager.save([order, payment]);
+      return payment;
     });
   }
 }
