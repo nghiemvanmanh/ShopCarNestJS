@@ -22,7 +22,7 @@ export class OderService {
     items: { productId: number; quantity: number }[],
   ): Promise<Order> {
     return this.dataSource.transaction(async (manager) => {
-      const products = await this.productService.decreaseStock(items);
+      const products = await this.productService.decreaseStock(manager, items);
       const orderItems = products.map((product) => {
         const item = items.find((i) => i.productId === product.id);
         return manager.create(OrderItem, {

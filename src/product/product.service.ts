@@ -8,7 +8,7 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from 'database/entities/product.entity';
-import { DataSource, Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 
 @Injectable()
 export class ProductService {
@@ -50,29 +50,26 @@ export class ProductService {
     return this.productRepository.delete(id);
   }
 
-  async decreaseStock(items: { productId: number; quantity: number }[]) {
-    return await this.dataSource.transaction(async (manager) => {
-      // lay san pham duoc goi
-      const productIds = items.map((item) => item.productId);
-
-      // Lấy toàn bộ sản phẩm trong DB
-      const products = await manager.findByIds(Product, productIds);
-
-      // So sanh so luong san pham trong DB duoc tim thay qua cac id duoc truyen voi so luong cac san pham duoc truyen
-      if (products.length !== productIds.length)
-        throw new Error('Some products not found');
-
-      // Kiểm tra số lượng từng sản phẩm
-      products.forEach((product) => {
-        const item = items.find((i) => i.productId === product.id);
-        if (product.stock < item.quantity)
-          throw new Error(`Not enough stock for product ID ${product.id}`);
-        product.stock -= item.quantity;
-      });
-
-      // Giảm stock cho tất cả sản phẩm trong 1 lần save
-      await manager.save(products);
-      return products;
+  async decreaseStock(
+    manager: EntityManager,
+    items: { productId: number; quantity: number }[],
+  ) {
+    const productMap = new Map(
+      items.map((item) => [item.productId, item.quantity]),
+    );
+    const products = await manager.findByIds(
+      Product,
+      Array.from(productMap.keys()),
+    );
+    if (products.length !== productMap.size)
+      throw new Error('Some products not found');
+    products.forEach((product) => {
+      const quantity = productMap.get(product.id);
+      if (product.stock < quantity)
+        throw new Error(`Not enough stock for product ID ${product.id}`);
+      product.stock -= quantity;
     });
+    await manager.save(products);
+    return products;
   }
 }
