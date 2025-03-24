@@ -6,6 +6,7 @@ import { User } from 'database/entities/user.entity';
 import { OrderItem } from 'database/entities/order-item.entity';
 import { Product } from 'database/entities/product.entity';
 import { ProductService } from 'src/product/product.service';
+import { Payment } from 'database/entities/payment.entity';
 
 @Injectable()
 export class OderService {
@@ -21,10 +22,7 @@ export class OderService {
     items: { productId: number; quantity: number }[],
   ): Promise<Order> {
     return this.dataSource.transaction(async (manager) => {
-      // Giảm stock và lấy thông tin sản phẩm
       const products = await this.productService.decreaseStock(items);
-
-      // Tính tổng tiền và tạo order items
       const orderItems = products.map((product) => {
         const item = items.find((i) => i.productId === product.id);
         return manager.create(OrderItem, {
@@ -38,19 +36,34 @@ export class OderService {
         (sum, item) => sum + item.price * item.quantity,
         0,
       );
-
-      // Tạo order
-      const order = manager.create(Order, {
+      return await manager.save(Order, {
         user: { id: userId },
         total_amount: totalAmount,
         status: 'PENDING',
-        orderItems, // Gán trực tiếp orderItems vào order nếu có relation cascade
+        orderItems,
+      });
+    });
+  }
+
+  async payments(orderId: number, paymentMethod: string): Promise<Payment> {
+    return await this.dataSource.transaction(async (manager) => {
+      const order = await manager.findOne(Order, {
+        where: { id: orderId },
+        relations: ['orderItems'],
       });
 
-      // Lưu order cùng orderItems 1 lần duy nhất
-      await manager.save(order);
-
-      return order;
+      if (!order) {
+        throw new Error('Order not found');
+      }
+      if (order.status !== 'PENDING') {
+        throw new Error('Order cannot be compeleted');
+      }
+      return manager.save(Payment, {
+        order,
+        amount: order.total_amount,
+        payment_method: paymentMethod,
+        status: 'SUCCESS',
+      });
     });
   }
 }
