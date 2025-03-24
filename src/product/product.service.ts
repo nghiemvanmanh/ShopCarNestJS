@@ -57,10 +57,7 @@ export class ProductService {
     const productMap = new Map(
       items.map((item) => [item.productId, item.quantity]),
     );
-    const products = await manager.findByIds(
-      Product,
-      Array.from(productMap.keys()),
-    );
+    const products = await manager.findByIds(Product, [...productMap.keys()]);
     if (products.length !== productMap.size)
       throw new Error('Some products not found');
     products.forEach((product) => {
