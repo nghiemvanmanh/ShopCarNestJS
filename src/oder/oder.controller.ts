@@ -21,4 +21,9 @@ export class OderController {
     const userId = req.user.id;
     return this.oderService.create(userId, items);
   }
+
+  @Post('payments')
+  payments(@Body() body: { orderId: number; paymentMethod: string }) {
+    return this.oderService.payments(body.orderId, body.paymentMethod);
+  }
 }

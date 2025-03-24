@@ -57,4 +57,20 @@ export class UserController {
   getProfile(@Request() req) {
     return req.user;
   }
+
+  @Post('review')
+  async createReview(
+    @Request() req,
+    @Param('productId') productId: number,
+    @Body()
+    body: { rating: number; comment: string },
+  ) {
+    const userId = req.user.id;
+    return await this.userService.createReview(
+      userId,
+      productId,
+      body.rating,
+      body.comment,
+    );
+  }
 }
