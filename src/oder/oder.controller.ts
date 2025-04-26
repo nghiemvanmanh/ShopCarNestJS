@@ -9,6 +9,11 @@ import {
 } from '@nestjs/common';
 import { OderService } from './oder.service';
 
+interface PaymentsDto {
+  orderIds: number[];
+  couponId?: number;
+  paymentMethod: string;
+}
 @Controller('oder')
 export class OderController {
   constructor(private readonly oderService: OderService) {}
@@ -23,7 +28,14 @@ export class OderController {
   }
 
   @Post('payments')
-  payments(@Body() body: { orderId: number; paymentMethod: string }) {
-    return this.oderService.payments(body.orderId, body.paymentMethod);
+  payments(
+    @Body()
+    body: PaymentsDto,
+  ) {
+    return this.oderService.checkout(
+      body.orderIds,
+      body.couponId,
+      body.paymentMethod,
+    );
   }
 }

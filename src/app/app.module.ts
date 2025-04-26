@@ -8,7 +8,8 @@ import { UserModule } from 'src/user/user.module';
 import { AuthModule } from 'src/auth/auth.module';
 import { ProductModule } from 'src/product/product.module';
 import { OderModule } from 'src/oder/oder.module';
-import { OderItemModule } from 'src/oder-item/oder-item.module';
+import { CouponModule } from 'src/coupon/coupon.module';
+
 @Module({
   imports: [
     TypeOrmModule.forRootAsync({
@@ -23,7 +24,7 @@ import { OderItemModule } from 'src/oder-item/oder-item.module';
     AuthModule,
     ProductModule,
     OderModule,
-    OderItemModule,
+    CouponModule,
   ],
   controllers: [AppController],
   providers: [AppService],

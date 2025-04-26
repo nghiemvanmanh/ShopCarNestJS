@@ -5,17 +5,23 @@ import {
   OneToOne,
   JoinColumn,
   CreateDateColumn,
+  ManyToMany,
+  ManyToOne,
+  OneToMany,
 } from 'typeorm';
 import { Order } from './order.entity';
+import { Coupon } from './coupon.entity';
 
 @Entity('payments')
 export class Payment {
   @PrimaryGeneratedColumn()
   id: number;
 
-  @OneToOne(() => Order)
-  @JoinColumn()
-  order: Order;
+  @OneToMany(() => Order, (oder) => oder.payments)
+  order: Order[];
+
+  @ManyToOne(() => Coupon, (coupon) => coupon.payments)
+  coupon: Coupon;
 
   @Column('decimal')
   amount: number;

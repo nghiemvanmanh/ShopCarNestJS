@@ -59,14 +59,20 @@ export class ProductService {
     );
     const products = await manager.findByIds(Product, [...productMap.keys()]);
     if (products.length !== productMap.size)
-      throw new Error('Some products not found');
+      throw new NotFoundException('Some products not found');
     products.forEach((product) => {
       const quantity = productMap.get(product.id);
       if (product.stock < quantity)
-        throw new Error(`Not enough stock for product ID ${product.id}`);
+        throw new BadRequestException(
+          `Not enough stock for product ID ${product.id}`,
+        );
       product.stock -= quantity;
     });
     await manager.save(products);
     return products;
+  }
+
+  async getListProducts() {
+    return this.productRepository.find();
   }
 }

@@ -19,4 +19,8 @@ export class CreateProductDto {
   @IsInt({ message: 'Stock must be an integer' })
   @Min(0, { message: 'Stock cannot be negative' })
   stock: number;
+
+  @IsString()
+  @IsNotEmpty()
+  image: string;
 }

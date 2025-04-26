@@ -6,9 +6,16 @@ import { Order } from 'database/entities/order.entity';
 import { User } from 'database/entities/user.entity';
 import { Product } from 'database/entities/product.entity';
 import { OrderItem } from 'database/entities/order-item.entity';
+import { ProductModule } from 'src/product/product.module';
+import { CouponModule } from 'src/coupon/coupon.module';
+import { Coupon } from 'database/entities/coupon.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Order, User, Product, OrderItem])],
+  imports: [
+    TypeOrmModule.forFeature([Order, User, Product, OrderItem, Coupon]),
+    ProductModule,
+    CouponModule,
+  ],
   controllers: [OderController],
   providers: [OderService],
   exports: [OderService],

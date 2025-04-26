@@ -13,6 +13,7 @@ import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { AdminGuard } from 'src/auth/guard/admin.guard';
+import { Public } from 'src/auth/decorators/custompublic';
 
 @Controller('product')
 export class ProductController {
@@ -25,7 +26,7 @@ export class ProductController {
   }
 
   @UseGuards(AdminGuard)
-  @Put('update')
+  @Put('update/:id')
   update(@Param('id') id: number, @Body() updateProductDto: UpdateProductDto) {
     return this.productService.updateProduct(id, updateProductDto);
   }
@@ -34,5 +35,11 @@ export class ProductController {
   @Delete('delete')
   delete(@Param('id') id: number) {
     return this.productService.deleteProduct(id);
+  }
+
+  @Public()
+  @Get('getProduct')
+  getList() {
+    return this.productService.getListProducts();
   }
 }

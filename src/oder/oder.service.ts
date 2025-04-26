@@ -1,4 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from 'database/entities/order.entity';
 import { DataSource, Repository } from 'typeorm';
@@ -7,13 +13,15 @@ import { OrderItem } from 'database/entities/order-item.entity';
 import { Product } from 'database/entities/product.entity';
 import { ProductService } from 'src/product/product.service';
 import { Payment } from 'database/entities/payment.entity';
+import { Coupon } from 'database/entities/coupon.entity';
+import { CouponService } from 'src/coupon/coupon.service';
+import { CouponUnit } from 'src/common/enums/coupon-unit.enum';
 
 @Injectable()
 export class OderService {
   constructor(
     private productService: ProductService,
-    @InjectRepository(OrderItem)
-    @InjectRepository(Product)
+    private couponService: CouponService,
     private dataSource: DataSource,
   ) {}
 
@@ -23,15 +31,18 @@ export class OderService {
   ): Promise<Order> {
     return this.dataSource.transaction(async (manager) => {
       const products = await this.productService.decreaseStock(manager, items);
-      const orderItems = products.map((product) => {
-        const item = items.find((i) => i.productId === product.id);
-        return manager.create(OrderItem, {
-          product,
-          quantity: item.quantity,
-          price: product.price,
-        });
-      });
-
+      const orderItems = await Promise.all(
+        products.map((product) => {
+          const item = items.find((i) => i.productId === product.id);
+          return manager.save(
+            manager.create(OrderItem, {
+              product,
+              quantity: item.quantity,
+              price: product.price,
+            }),
+          );
+        }),
+      );
       const totalAmount = orderItems.reduce(
         (sum, item) => sum + item.price * item.quantity,
         0,
@@ -45,28 +56,61 @@ export class OderService {
     });
   }
 
-  async payments(orderId: number, paymentMethod: string): Promise<Payment> {
-    return await this.dataSource.transaction(async (manager) => {
-      const order = await manager.findOne(Order, {
-        where: { id: orderId },
+  async checkout(
+    orderIds: number[],
+    couponId: number,
+    paymentMethod: string,
+  ): Promise<Payment> {
+    return this.dataSource.transaction(async (manager) => {
+      const orders = await manager.find(Order, {
+        where: orderIds.map((id) => ({ id })),
         relations: ['orderItems'],
       });
 
-      if (!order) {
-        throw new Error('Order not found');
+      if (orders.length !== orderIds.length) {
+        throw new NotFoundException('One or more orders not found');
       }
-      if (order.status !== 'PENDING') {
-        throw new Error('Order cannot be compeleted');
+
+      if (orders.some((order) => order.status !== 'PENDING')) {
+        throw new ConflictException('Some orders cannot be completed');
+      }
+
+      let coupon: Coupon = null;
+      if (couponId) {
+        coupon = await this.couponService.decreaseCouponWithAtomic(
+          manager,
+          couponId,
+        );
+      }
+
+      const totalAmount = orders.reduce(
+        (sum, order) => sum + order.total_amount,
+        0,
+      );
+      let finalAmount = totalAmount;
+
+      if (coupon) {
+        finalAmount =
+          coupon.unit === CouponUnit.PERCENT
+            ? totalAmount * (1 - coupon.value / 100)
+            : totalAmount - coupon.value;
+
+        finalAmount = Math.max(finalAmount, 0);
       }
       const payment = await manager.create(Payment, {
-        order,
-        amount: order.total_amount,
+        orders,
+        coupon,
+        amount: finalAmount,
         payment_method: paymentMethod,
         status: 'SUCCESS',
       });
-      order.status = 'COMPLETED';
-      await manager.save([order, payment]);
-      return payment;
+      for (const order of orders) {
+        order.status = 'COMPLETED';
+        order.payments = payment;
+      }
+
+      await manager.save(orders);
+      return manager.save(payment);
     });
   }
 }
