@@ -8,13 +8,14 @@ import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Product } from 'database/entities/product.entity';
-import { Repository } from 'typeorm';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 
 @Injectable()
 export class ProductService {
   constructor(
     @InjectRepository(Product)
     private productRepository: Repository<Product>,
+    private dataSource: DataSource,
   ) {}
 
   async createProduct(addProduct: CreateProductDto): Promise<Product> {
@@ -49,19 +50,23 @@ export class ProductService {
     return this.productRepository.delete(id);
   }
 
-  async decreaseStock(productId: number, quantity: number): Promise<Product> {
-    const product = await this.productRepository.findOne({
-      where: { id: productId },
+  async decreaseStock(
+    manager: EntityManager,
+    items: { productId: number; quantity: number }[],
+  ) {
+    const productMap = new Map(
+      items.map((item) => [item.productId, item.quantity]),
+    );
+    const products = await manager.findByIds(Product, [...productMap.keys()]);
+    if (products.length !== productMap.size)
+      throw new Error('Some products not found');
+    products.forEach((product) => {
+      const quantity = productMap.get(product.id);
+      if (product.stock < quantity)
+        throw new Error(`Not enough stock for product ID ${product.id}`);
+      product.stock -= quantity;
     });
-    // if (!product) {
-    //   throw new NotFoundException(`Product ID ${productId} not found`);
-    // }
-    // if (product.stock < quantity) {
-    //   throw new BadRequestException(
-    //     `Not enough stock for product ID ${productId}`,
-    //   );
-    // }
-    product.stock -= quantity;
-    return await this.productRepository.save(product);
+    await manager.save(products);
+    return products;
   }
 }
