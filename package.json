@@ -6,7 +6,7 @@
     "private": true,
     "license": "UNLICENSED",
     "scripts": {
-        "build": "tsc",
+        "build": "nest build",
         "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
         "start":"node dist/main.js",
         "dev": "cross-env NODE_ENV=development nodemon --watch src -e ts --exec ts-node -r tsconfig-paths/register src/main.ts",
