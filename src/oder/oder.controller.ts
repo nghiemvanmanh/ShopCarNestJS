@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Get,
 } from '@nestjs/common';
 import { OderService } from './oder.service';
 
@@ -14,7 +15,7 @@ interface PaymentsDto {
   couponId?: number;
   paymentMethod: string;
 }
-@Controller('oder')
+@Controller('order')
 export class OderController {
   constructor(private readonly oderService: OderService) {}
 
@@ -37,5 +38,10 @@ export class OderController {
       body.couponId,
       body.paymentMethod,
     );
+  }
+  @Get('getOrder')
+  getOrder(@Request() req) {
+    const userId = req.user.id;
+    return this.oderService.getOrder(userId);
   }
 }

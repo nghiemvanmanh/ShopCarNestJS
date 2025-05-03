@@ -20,6 +20,8 @@ import { CouponUnit } from 'src/common/enums/coupon-unit.enum';
 @Injectable()
 export class OderService {
   constructor(
+    @InjectRepository(Order)
+    private orderRepository: Repository<Order>,
     private productService: ProductService,
     private couponService: CouponService,
     private dataSource: DataSource,
@@ -112,5 +114,46 @@ export class OderService {
       await manager.save(orders);
       return manager.save(payment);
     });
+  }
+
+  /**
+   * @description lấy danh dách order từ người dùng
+   * @param userId
+   * @returns
+   */
+  async getOrder(userId: number) {
+    const data = await this.orderRepository
+      .createQueryBuilder('order')
+      .leftJoin('order.user', 'user')
+      .leftJoin('order.orderItems', 'orderItems')
+      .leftJoin('orderItems.product', 'product')
+      .select([
+        'order.id AS order_id',
+        'user.username AS username',
+        'order.total_amount AS total_amount',
+        'orderItems.price AS price',
+        'orderItems.quantity AS quantity',
+        'product.name AS product',
+      ])
+      .orderBy('order.id', 'DESC')
+      .where('order.userId = :userId', { userId })
+      .getRawMany();
+
+    const dataGroupByProduct = data.reduce((acc, item) => {
+      const existingProduct = acc.find(
+        (i) => i.product === item.product && i.order_id === item.order_id,
+      );
+      if (existingProduct) {
+        existingProduct.quantity += item.quantity;
+        existingProduct.price = item.total_amount;
+      } else {
+        acc.push({
+          ...item,
+          price: item.price * item.quantity,
+        });
+      }
+      return acc;
+    }, []);
+    return dataGroupByProduct;
   }
 }

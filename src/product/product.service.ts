@@ -75,4 +75,10 @@ export class ProductService {
   async getListProducts() {
     return this.productRepository.find();
   }
+
+  async getAllProductNames(): Promise<{ id: number; name: string }[]> {
+    return await this.productRepository.find({
+      select: ['id', 'name'],
+    });
+  }
 }

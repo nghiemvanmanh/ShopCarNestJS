@@ -32,7 +32,7 @@ export class ProductController {
   }
 
   @UseGuards(AdminGuard)
-  @Delete('delete')
+  @Delete('delete/:id')
   delete(@Param('id') id: number) {
     return this.productService.deleteProduct(id);
   }
@@ -41,5 +41,11 @@ export class ProductController {
   @Get('getProduct')
   getList() {
     return this.productService.getListProducts();
+  }
+
+  @Public()
+  @Get('getNameProduct')
+  getNameProductSelect() {
+    return this.productService.getAllProductNames();
   }
 }

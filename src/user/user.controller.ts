@@ -8,6 +8,7 @@ import {
   Put,
   UseGuards,
   Delete,
+  UnauthorizedException,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -72,5 +73,23 @@ export class UserController {
       body.rating,
       body.comment,
     );
+  }
+  @Post('refresh')
+  async RefreshToken(@Body() body: { refreshToken: string }) {
+    const { refreshToken } = body;
+
+    // Gọi service để làm mới access token
+    const newAccessToken = await this.authService.refreshAccessToken(
+      refreshToken,
+    );
+
+    if (!newAccessToken) {
+      throw new UnauthorizedException('Invalid or expired refresh token');
+    }
+
+    // Trả về access token mới
+    return {
+      accessToken: newAccessToken,
+    };
   }
 }
