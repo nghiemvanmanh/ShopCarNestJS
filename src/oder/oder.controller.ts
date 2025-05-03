@@ -6,28 +6,42 @@ import {
   Patch,
   Param,
   Delete,
+  Get,
 } from '@nestjs/common';
 import { OderService } from './oder.service';
-import { CreateOderDto } from './dto/create-oder.dto';
-import { UpdateOderDto } from './dto/update-oder.dto';
 
-@Controller('oder')
+interface PaymentsDto {
+  orderIds: number[];
+  couponId?: number;
+  paymentMethod: string;
+}
+@Controller('order')
 export class OderController {
   constructor(private readonly oderService: OderService) {}
 
   @Post('create')
-  create(@Request() req, @Body() createOderDto: CreateOderDto) {
-    const user = req.user;
-    return this.oderService.create(user.id, createOderDto);
+  create(
+    @Request() req,
+    @Body() items: { productId: number; quantity: number }[],
+  ) {
+    const userId = req.user.id;
+    return this.oderService.create(userId, items);
   }
 
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateOderDto: UpdateOderDto) {
-    return this.oderService.update(+id, updateOderDto);
+  @Post('payments')
+  payments(
+    @Body()
+    body: PaymentsDto,
+  ) {
+    return this.oderService.checkout(
+      body.orderIds,
+      body.couponId,
+      body.paymentMethod,
+    );
   }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.oderService.remove(+id);
+  @Get('getOrder')
+  getOrder(@Request() req) {
+    const userId = req.user.id;
+    return this.oderService.getOrder(userId);
   }
 }

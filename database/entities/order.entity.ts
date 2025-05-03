@@ -5,6 +5,7 @@ import {
   ManyToOne,
   OneToMany,
   CreateDateColumn,
+  JoinColumn,
 } from 'typeorm';
 import { User } from './user.entity';
 import { OrderItem } from './order-item.entity';
@@ -21,7 +22,7 @@ export class Order {
   @Column('decimal')
   total_amount: number;
 
-  @Column()
+  @Column({ default: 'PENDING' })
   status: string;
 
   @CreateDateColumn({ type: 'timestamp' })
@@ -30,6 +31,7 @@ export class Order {
   @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
   orderItems: OrderItem[];
 
-  @OneToMany(() => Payment, (payment) => payment.order)
-  payments: Payment[];
+  @ManyToOne(() => Payment, (payment) => payment.order)
+  @JoinColumn({ name: 'paymentsId' })
+  payments: Payment;
 }
