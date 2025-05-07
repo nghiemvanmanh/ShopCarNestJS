@@ -15,6 +15,7 @@ interface PaymentsDto {
   couponId?: number;
   paymentMethod: string;
 }
+
 @Controller('order')
 export class OderController {
   constructor(private readonly oderService: OderService) {}
@@ -22,7 +23,7 @@ export class OderController {
   @Post('create')
   create(
     @Request() req,
-    @Body() items: { productId: number; quantity: number }[],
+    @Body() items: { productId: number; quantity: number; note: string }[],
   ) {
     const userId = req.user.id;
     return this.oderService.create(userId, items);
@@ -43,5 +44,16 @@ export class OderController {
   getOrder(@Request() req) {
     const userId = req.user.id;
     return this.oderService.getOrder(userId);
+  }
+
+  @Delete('deleteOrder/:id')
+  deleteOrder(@Request() req, @Param('id') id: number) {
+    const userId = req.user.id;
+    return this.oderService.deleteOrder(userId, id);
+  }
+
+  @Delete('deleteItemOrder/:id')
+  deleteItemOrder(@Param('id') id: number) {
+    return this.oderService.deleteItemOrder(id);
   }
 }

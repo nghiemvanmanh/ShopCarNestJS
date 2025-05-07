@@ -28,7 +28,10 @@ export class Order {
   @CreateDateColumn({ type: 'timestamp' })
   created_at: Date;
 
-  @OneToMany(() => OrderItem, (orderItem) => orderItem.order)
+  @OneToMany(() => OrderItem, (orderItem) => orderItem.order, {
+    cascade: true,
+    onDelete: 'CASCADE',
+  })
   orderItems: OrderItem[];
 
   @ManyToOne(() => Payment, (payment) => payment.order)
